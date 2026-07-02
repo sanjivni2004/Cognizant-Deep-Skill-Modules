@@ -1,0 +1,56 @@
+class Employee {
+    String employeeId;
+    String name;
+    String position;
+    double salary;
+
+    public Employee(String employeeId, String name, String position, double salary) {
+        this.employeeId = employeeId;
+        this.name = name;
+        this.position = position;
+        this.salary = salary;
+    }
+}
+
+public class EmployeeManagement {
+    private Employee[] records;
+    private int count;
+
+    public EmployeeManagement(int capacity) {
+        records = new Employee[capacity];
+        count = 0;
+    }
+
+    public boolean add(Employee emp) {
+        if (count >= records.length) return false; // Array is full
+        records[count++] = emp;
+        return true;
+    }
+
+    public Employee search(String empId) {
+        for (int i = 0; i < count; i++) {
+            if (records[i].employeeId.equals(empId)) return records[i];
+        }
+        return null;
+    }
+
+    public void traverse() {
+        for (int i = 0; i < count; i++) {
+            System.out.println(records[i].name + " - " + records[i].position);
+        }
+    }
+
+    public boolean delete(String empId) {
+        for (int i = 0; i < count; i++) {
+            if (records[i].employeeId.equals(empId)) {
+                // Shift subsequent records left to keep array contiguous
+                for (int j = i; j < count - 1; j++) {
+                    records[j] = records[j + 1];
+                }
+                records[--count] = null;
+                return true;
+            }
+        }
+        return false;
+    }
+}
