@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context 
+                           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="com.library"/>
+
+</beans>
+
+2. Refactored Stereotype Component Classes
+
+// BookRepository.java
+package com.library.repository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public class BookRepository {
+    public void checkConnection() {
+        System.out.println("Annotation-based Repository functioning smoothly.");
+    }
+}
+
+// BookService.java
+package com.library.service;
+import com.library.repository.BookRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class BookService {
+
+    @Autowired
+    private BookRepository bookRepository;
+
+    public void runLibraryTask() {
+        bookRepository.checkConnection();
+    }
+}
