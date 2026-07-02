@@ -1,0 +1,64 @@
+// Student.java (Model)
+class Student {
+    private String name;
+    private String id;
+    private String grade;
+
+    public Student(String id, String name, String grade) {
+        this.id = id;
+        this.name = name;
+        this.grade = grade;
+    }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public String getGrade() { return grade; }
+    public void setGrade(String grade) { this.grade = grade; }
+}
+
+// StudentView.java (View)
+class StudentView {
+    public void displayStudentDetails(String studentName, String studentId, String studentGrade) {
+        System.out.println("--- Student Profile ---");
+        System.out.println("ID: " + studentId);
+        System.out.println("Name: " + studentName);
+        System.out.println("Grade: " + studentGrade);
+    }
+}
+
+// StudentController.java (Controller)
+class StudentController {
+    private final Student model;
+    private final StudentView view;
+
+    public StudentController(Student model, StudentView view) {
+        this.model = model;
+        this.view = view;
+    }
+
+    public void setStudentName(String name) { model.setName(name); }
+    public String getStudentName() { return model.getName(); }
+    public void setStudentGrade(String grade) { model.setGrade(grade); }
+
+    public void updateView() {
+        view.displayStudentDetails(model.getName(), model.getId(), model.getGrade());
+    }
+}
+
+// MVCPatternExample.java
+public class MVCPatternExample {
+    public static void main(String[] args) {
+        Student model = new Student("20BCE1001", "Alex Paul", "A");
+        StudentView view = new StudentView();
+
+        StudentController controller = new StudentController(model, view);
+        controller.updateView();
+
+        // Update model details via controller
+        controller.setStudentGrade("S");
+        System.out.println("\n[System Notification] Grade updated.");
+        controller.updateView();
+    }
+}
