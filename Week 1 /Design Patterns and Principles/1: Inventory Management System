@@ -1,1 +1,28 @@
+class Logger {
 
+    private static class Holder {
+        private static final Logger INSTANCE = new Logger();
+    }
+
+    private Logger() {}
+
+    public static Logger getInstance() {
+        return Holder.INSTANCE;
+    }
+
+    public void log(String message) {
+        System.out.println("[LOG]: " + message);
+    }
+}
+
+public class SingletonPatternExample {
+
+    public static void main(String[] args) {
+        Logger logger1 = Logger.getInstance();
+        Logger logger2 = Logger.getInstance();
+
+        logger1.log("Testing first log statement.");
+
+        System.out.println("Are both instances identical? " + (logger1 == logger2));
+    }
+}
