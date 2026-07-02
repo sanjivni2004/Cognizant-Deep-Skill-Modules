@@ -1,0 +1,53 @@
+CREATE OR REPLACE FUNCTION CalculateAge (
+    p_dob IN DATE
+) RETURN NUMBER IS
+    v_age NUMBER;
+BEGIN
+    v_age := FLOOR(MONTHS_BETWEEN(SYSDATE, p_dob) / 12);
+    RETURN v_age;
+END;
+/
+
+CREATE OR REPLACE FUNCTION CalculateMonthlyInstallment (
+    p_amount   IN NUMBER,
+    p_rate     IN NUMBER,
+    p_years    IN NUMBER
+) RETURN NUMBER IS
+    v_monthly_rate NUMBER;
+    v_total_months NUMBER;
+    v_emi          NUMBER;
+BEGIN
+    -- Monthly Interest Rate calculation (Convert annual rate percentage to decimal monthly value)
+    v_monthly_rate := (p_rate / 100) / 12;
+    v_total_months := p_years * 12;
+    
+    -- Standard EMI calculation formula
+    IF v_monthly_rate = 0 THEN
+        v_emi := p_amount / v_total_months;
+    ELSE
+        v_emi := (p_amount * v_monthly_rate * POWER(1 + v_monthly_rate, v_total_months)) / 
+                 (POWER(1 + v_monthly_rate, v_total_months) - 1);
+    END IF;
+    
+    RETURN ROUND(v_emi, 2);
+END;
+/
+
+CREATE OR REPLACE FUNCTION HasSufficientBalance (
+    p_account_id IN NUMBER,
+    p_amount     IN NUMBER
+) RETURN BOOLEAN IS
+    v_balance NUMBER := 0;
+BEGIN
+    SELECT Balance INTO v_balance FROM Accounts WHERE AccountID = p_account_id;
+    
+    IF v_balance >= p_amount THEN
+        RETURN TRUE;
+    ELSE
+        RETURN FALSE;
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN FALSE;
+END;
+/
