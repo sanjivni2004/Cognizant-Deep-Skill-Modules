@@ -1,0 +1,46 @@
+CREATE OR REPLACE PROCEDURE ProcessMonthlyInterest AS
+BEGIN
+    UPDATE Accounts
+    SET Balance = Balance * 1.01,
+        LastModified = SYSDATE
+    WHERE AccountType = 'Savings';
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Monthly interest of 1% applied to all Savings accounts.');
+END;
+/
+
+CREATE OR REPLACE PROCEDURE UpdateEmployeeBonus (
+    p_dept   IN VARCHAR2,
+    p_bonus_pct IN NUMBER
+) AS
+BEGIN
+    UPDATE Employees
+    SET Salary = Salary + (Salary * (p_bonus_pct / 100))
+    WHERE Department = p_dept;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Bonus applied to department: ' || p_dept);
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE TransferFunds (
+    p_from_acc IN NUMBER,
+    p_to_acc   IN NUMBER,
+    p_amt      IN NUMBER
+) AS
+    v_balance NUMBER;
+BEGIN
+    SELECT Balance INTO v_balance FROM Accounts WHERE AccountID = p_from_acc;
+    
+    IF v_balance >= p_amt THEN
+        UPDATE Accounts SET Balance = Balance - p_amt WHERE AccountID = p_from_acc;
+        UPDATE Accounts SET Balance = Balance + p_amt WHERE AccountID = p_to_acc;
+        COMMIT;
+        DBMS_OUTPUT.PUT_LINE('Transferred ' || p_amt || ' successfully.');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Insufficient balance.');
+    END IF;
+END;
+/
