@@ -1,0 +1,51 @@
+// Image.java
+interface Image {
+    void display();
+}
+
+class RealImage implements Image {
+    private final String filename;
+
+    public RealImage(String filename) {
+        this.filename = filename;
+        loadFromRemoteServer();
+    }
+
+    private void loadFromRemoteServer() {
+        System.out.println("Loading " + filename + " from remote server... (Heavy Operation)");
+    }
+
+    public void display() {
+        System.out.println("Displaying " + filename);
+    }
+}
+
+class ProxyImage implements Image {
+    private RealImage realImage;
+    private final String filename;
+
+    public ProxyImage(String filename) {
+        this.filename = filename;
+    }
+
+    public void display() {
+        // Lazy initialization & basic caching setup
+        if (realImage == null) {
+            realImage = new RealImage(filename);
+        }
+        realImage.display();
+    }
+}
+
+// ProxyPatternExample.java
+public class ProxyPatternExample {
+    public static void main(String[] args) {
+        Image image = new ProxyImage("landscape.png");
+
+        System.out.println("--- First Call (Triggers load) ---");
+        image.display();
+
+        System.out.println("\n--- Second Call (Uses cached instance) ---");
+        image.display();
+    }
+}
