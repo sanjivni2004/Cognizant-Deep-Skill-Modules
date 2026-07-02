@@ -1,0 +1,54 @@
+DECLARE
+    -- Cursor to fetch loans with customer birth date
+    CURSOR c_senior_loans IS
+        SELECT l.LoanID, l.InterestRate, c.DOB
+        FROM Loans l
+        JOIN Customers c ON l.CustomerID = c.CustomerID;
+    
+    v_age NUMBER;
+BEGIN
+    FOR r_loan IN c_senior_loans LOOP
+        -- Calculate current age based on Date of Birth
+        v_age := FLOOR(MONTHS_BETWEEN(SYSDATE, r_loan.DOB) / 12);
+        
+        IF v_age > 60 THEN
+            UPDATE Loans
+            SET InterestRate = InterestRate - 1
+            WHERE LoanID = r_loan.LoanID;
+        END IF;
+    END LOOP;
+    COMMIT;
+END;
+/
+
+-- Alter statement to support scenario context if needed locally
+-- ALTER TABLE Customers ADD IsVIP VARCHAR2(5) DEFAULT 'FALSE';
+
+BEGIN
+    -- Using a flat dynamic UPDATE statement for structural efficiency
+    UPDATE Customers
+    SET LastModified = SYSDATE
+    WHERE Balance > 10000;
+    
+    -- Display action block using an iterative loop placeholder for tracking
+    FOR r_cust IN (SELECT Name FROM Customers WHERE Balance > 10000) LOOP
+        DBMS_OUTPUT.PUT_LINE('Customer ' || r_cust.Name || ' is promoted to VIP status.');
+    END LOOP;
+    COMMIT;
+END;
+/
+
+DECLARE
+    CURSOR c_due_loans IS
+        SELECT l.LoanID, c.Name, l.EndDate
+        FROM Loans l
+        JOIN Customers c ON l.CustomerID = c.CustomerID
+        WHERE l.EndDate BETWEEN SYSDATE AND SYSDATE + 30;
+BEGIN
+    FOR r_loan IN c_due_loans LOOP
+        DBMS_OUTPUT.PUT_LINE('Reminder: Customer ' || r_loan.Name || 
+                             ' has Loan ID ' || r_loan.LoanID || 
+                             ' due on ' || TO_CHAR(r_loan.EndDate, 'YYYY-MM-DD') || '.');
+    END LOOP;
+END;
+/
