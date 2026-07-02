@@ -1,0 +1,37 @@
+// CustomerRepository.java
+interface CustomerRepository {
+    String findCustomerById(String id);
+}
+
+class CustomerRepositoryImpl implements CustomerRepository {
+    public String findCustomerById(String id) {
+        // Mocking database retrieval
+        return "Customer Details for ID " + id + ": Jane Doe";
+    }
+}
+
+// CustomerService.java
+class CustomerService {
+    private final CustomerRepository repository;
+
+    // Constructor Injection
+    public CustomerService(CustomerRepository repository) {
+        this.repository = repository;
+    }
+
+    public void showCustomer(String id) {
+        String data = repository.findCustomerById(id);
+        System.out.println(data);
+    }
+}
+
+// DependencyInjectionExample.java
+public class DependencyInjectionExample {
+    public static void main(String[] args) {
+        // Injecting dependence manually (as a lightweight container would)
+        CustomerRepository repo = new CustomerRepositoryImpl();
+        CustomerService service = new CustomerService(repo);
+
+        service.showCustomer("CUST-992");
+    }
+}
