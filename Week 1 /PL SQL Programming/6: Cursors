@@ -1,0 +1,16 @@
+DECLARE
+    CURSOR UpdateLoanInterestRates IS
+        SELECT LoanID, InterestRate 
+        FROM Loans 
+        FOR UPDATE;
+BEGIN
+    FOR r_loan IN UpdateLoanInterestRates LOOP
+        -- For example policy scenario: Add 0.5% base shift adjustment
+        UPDATE Loans
+        SET InterestRate = InterestRate + 0.5
+        WHERE CURRENT OF UpdateLoanInterestRates;
+    END LOOP;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Loan policy rates evaluated and modified.');
+END;
+/
