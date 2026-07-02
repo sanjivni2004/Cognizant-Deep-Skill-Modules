@@ -1,0 +1,23 @@
+public class FinancialForecasting {
+
+    /**
+     * Recursive calculation of future values
+     * Formula: FV = PV * (1 + rate)^years
+     */
+    public static double predictFutureValue(double presentValue, double growthRate, int years) {
+        // Base case: 0 years left means value remains presentValue
+        if (years == 0) return presentValue;
+        
+        // Recursive step
+        return predictFutureValue(presentValue * (1 + growthRate), growthRate, years - 1);
+    }
+
+    public static void main(String[] args) {
+        double pv = 1000.0;     // Starting Principal
+        double rate = 0.05;     // 5% growth rate
+        int period = 5;         // 5 Year prediction block
+
+        double expectedValue = predictFutureValue(pv, rate, period);
+        System.out.printf("Predicted Future Value after %d years: $%.2f%n", period, expectedValue);
+    }
+}
