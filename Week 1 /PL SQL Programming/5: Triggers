@@ -1,0 +1,20 @@
+CREATE OR REPLACE TRIGGER CheckTransactionRules
+BEFORE INSERT ON Transactions
+FOR EACH ROW
+DECLARE
+    v_current_balance NUMBER;
+BEGIN
+    -- Business rule: Deposits must be positive
+    IF :NEW.TransactionType = 'Deposit' AND :NEW.Amount <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Deposit amount must be positive.');
+    END IF;
+
+    -- Business rule: Withdrawals cannot exceed current balance status
+    IF :NEW.TransactionType = 'Withdrawal' THEN
+        SELECT Balance INTO v_current_balance FROM Accounts WHERE AccountID = :NEW.AccountID;
+        IF :NEW.Amount > v_current_balance THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Insufficient balance for this withdrawal transaction.');
+        END IF;
+    END IF;
+END;
+/
