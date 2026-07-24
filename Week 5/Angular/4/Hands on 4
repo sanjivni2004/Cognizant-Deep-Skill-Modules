@@ -1,0 +1,317 @@
+ Task 1 & Task 2: Enrollment Form Implementation
+
+# Step 38: Generate Component and Setup Routing
+
+Generate the enrollment form component via CLI:
+
+```bash
+ng generate component pages/enrollment-form
+
+```
+
+If your project uses modern **standalone routing** (`app.routes.ts`), add the route as follows:
+
+# `src/app/app.routes.ts`
+
+```typescript
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { path: 'enroll', loadComponent: () => import('./pages/enrollment-form/enrollment-form.component').then(m => m.EnrollmentFormComponent) },
+  { path: '', redirectTo: 'enroll', pathMatch: 'full' }
+];
+
+```
+
+*(If using traditional `app-routing.module.ts`, add `{ path: 'enroll', component: EnrollmentFormComponent }` to your `routes` array).*
+
+---
+
+# Step 39–42 & 43–47: Component & Template Implementation
+
+# `src/app/pages/enrollment-form/enrollment-form.component.ts`
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule, NgForm } from '@angular/forms';
+
+export interface EnrollmentData {
+  studentName: string;
+  studentEmail: string;
+  courseId: number | null;
+  preferredSemester: string;
+  agreeToTerms: boolean;
+}
+
+@Component({
+  selector: 'app-enrollment-form',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './enrollment-form.component.html',
+  styleUrls: ['./enrollment-form.component.css']
+})
+export class EnrollmentFormComponent {
+  // Form model initialization
+  formData: EnrollmentData = {
+    studentName: '',
+    studentEmail: '',
+    courseId: null,
+    preferredSemester: 'Odd',
+    agreeToTerms: false
+  };
+
+  // 46. Submission success state
+  submitted: boolean = false;
+
+  // 40. Submission handler
+  onSubmit(form: NgForm): void {
+    console.log('Form Submitted!');
+    console.log('Form Validity:', form.valid);
+    console.log('Form Value Object:', form.value);
+
+    if (form.valid) {
+      this.submitted = true;
+    }
+  }
+
+  // 47. Custom clear handler if needed in addition to inline reset
+  onReset(form: NgForm): void {
+    form.resetForm({
+      preferredSemester: 'Odd' // Option to reset to default initial state
+    });
+    this.submitted = false;
+  }
+}
+
+```
+
+---
+
+#### `src/app/pages/enrollment-form/enrollment-form.component.html`
+
+```html
+<section class="form-container">
+  <h2>Student Enrollment Request</h2>
+
+  <!-- 46. Success banner -->
+  <div *ngIf="submitted" class="alert alert-success">
+    Enrollment request submitted successfully!
+  </div>
+
+  <!-- 39. Form wrapper with template reference #enrollForm="ngForm" -->
+  <form #enrollForm="ngForm" (ngSubmit)="onSubmit(enrollForm)" novalidate>
+
+    <!-- Student Name -->
+    <div class="form-group">
+      <label for="studentName">Student Name *</label>
+      <input 
+        type="text" 
+        id="studentName" 
+        name="studentName" 
+        [(ngModel)]="formData.studentName" 
+        #nameCtrl="ngModel" 
+        required 
+        minlength="3" 
+        class="form-control"
+      />
+      <!-- 44. Contextual validation messages for studentName -->
+      <div *ngIf="nameCtrl.invalid && nameCtrl.touched" class="error-feedback">
+        <small *ngIf="nameCtrl.errors?.['required']">Name is required.</small>
+        <small *ngIf="nameCtrl.errors?.['minlength']">Name must be at least 3 characters.</small>
+      </div>
+    </div>
+
+    <!-- Student Email -->
+    <div class="form-group">
+      <label for="studentEmail">Email Address *</label>
+      <input 
+        type="email" 
+        id="studentEmail" 
+        name="studentEmail" 
+        [(ngModel)]="formData.studentEmail" 
+        #emailCtrl="ngModel" 
+        required 
+        email 
+        class="form-control"
+      />
+      <!-- Contextual validation messages for email -->
+      <div *ngIf="emailCtrl.invalid && emailCtrl.touched" class="error-feedback">
+        <small *ngIf="emailCtrl.errors?.['required']">Email address is required.</small>
+        <small *ngIf="emailCtrl.errors?.['email']">Please enter a valid email address.</small>
+      </div>
+    </div>
+
+    <!-- Course ID -->
+    <div class="form-group">
+      <label for="courseId">Course ID *</label>
+      <input 
+        type="number" 
+        id="courseId" 
+        name="courseId" 
+        [(ngModel)]="formData.courseId" 
+        #courseCtrl="ngModel" 
+        required 
+        class="form-control"
+      />
+      <div *ngIf="courseCtrl.invalid && courseCtrl.touched" class="error-feedback">
+        <small *ngIf="courseCtrl.errors?.['required']">Course ID is required.</small>
+      </div>
+    </div>
+
+    <!-- Preferred Semester -->
+    <div class="form-group">
+      <label for="preferredSemester">Preferred Semester</label>
+      <select 
+        id="preferredSemester" 
+        name="preferredSemester" 
+        [(ngModel)]="formData.preferredSemester" 
+        class="form-control">
+        <option value="Odd">Odd Semester</option>
+        <option value="Even">Even Semester</option>
+      </select>
+    </div>
+
+    <!-- Terms & Conditions Checkbox -->
+    <div class="form-group checkbox-group">
+      <label>
+        <input 
+          type="checkbox" 
+          id="agreeToTerms" 
+          name="agreeToTerms" 
+          [(ngModel)]="formData.agreeToTerms" 
+          #termsCtrl="ngModel" 
+          required 
+        />
+        I agree to the enrollment terms and conditions *
+      </label>
+      <div *ngIf="termsCtrl.invalid && termsCtrl.touched" class="error-feedback">
+        <small *ngIf="termsCtrl.errors?.['required']">You must accept the terms to proceed.</small>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="button-group">
+      <!-- 41. Submit button disabled when form is invalid -->
+      <button type="submit" [disabled]="enrollForm.invalid" class="btn btn-primary">
+        Submit
+      </button>
+
+      <!-- 47. Reset button -->
+      <button type="button" (click)="onReset(enrollForm)" class="btn btn-secondary">
+        Reset
+      </button>
+    </div>
+
+  </form>
+</section>
+
+```
+
+---
+
+# `src/app/pages/enrollment-form/enrollment-form.component.css`
+
+```css
+.form-container {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.form-group {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.form-control {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+/* 45. Angular automatic validation state CSS classes */
+.form-control.ng-invalid.ng-touched {
+  border-color: #d32f2f;
+  background-color: #fff8f8;
+}
+
+.form-control.ng-valid.ng-touched {
+  border-color: #2e7d32;
+}
+
+.error-feedback {
+  color: #d32f2f;
+  margin-top: 4px;
+}
+
+.checkbox-group {
+  flex-direction: row;
+  align-items: center;
+}
+
+.checkbox-group label {
+  font-weight: normal;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #1976d2;
+  color: white;
+}
+
+.btn-primary:disabled {
+  background-color: #b0bec5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #757575;
+  color: white;
+}
+
+.alert-success {
+  padding: 12px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+```
+
+---
+
