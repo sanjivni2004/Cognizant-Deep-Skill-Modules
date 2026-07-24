@@ -1,0 +1,427 @@
+
+
+# Task 1: Structural Directives (`*ngIf`, `*ngFor`, `*ngSwitch`)
+
+# Step 25–28: Updating `CourseListComponent` & `CourseCardComponent`
+
+# `src/app/pages/course-list/course-list.component.ts`
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CourseCardComponent, Course } from '../../components/course-card/course-card.component';
+
+@Component({
+  selector: 'app-course-list',
+  standalone: true,
+  imports: [CommonModule, CourseCardComponent],
+  templateUrl: './course-list.component.html',
+  styleUrls: ['./course-list.component.css']
+})
+export class CourseListComponent implements OnInit {
+  // 25. Loading state flag
+  isLoading: boolean = true;
+
+  // 27. Course model expanded with gradeStatus property
+  courses: Course[] = [
+    { id: 101, name: 'Angular Fundamentals', code: 'CS101', credits: 4, gradeStatus: 'passed' },
+    { id: 102, name: 'TypeScript Deep Dive', code: 'CS102', credits: 1, gradeStatus: 'passed' },
+    { id: 103, name: 'Web Development BootCamp', code: 'CS103', credits: 4, gradeStatus: 'failed' },
+    { id: 104, name: 'Data Structures in JS', code: 'CS104', credits: 3, gradeStatus: 'pending' },
+    { id: 105, name: 'RxJS & Reactive Patterns', code: 'CS105', credits: 2, gradeStatus: 'pending' }
+  ];
+
+  selectedCourseId: number | null = null;
+
+  ngOnInit(): void {
+    // 25. Simulate 1.5 second network delay
+    setTimeout(() => {
+      this.isLoading = false;
+    }, 1500);
+  }
+
+
+  trackByCourseId(index: number, course: Course): number {
+    return course.id;
+  }
+
+  onEnroll(courseId: number): void {
+    this.selectedCourseId = courseId;
+  }
+}
+
+```
+
+# `src/app/pages/course-list/course-list.component.html`
+
+```html
+<section class="course-list-container">
+  <h2>Available Courses</h2>
+
+  <!-- 25. Loading state with *ngIf -->
+  <div *ngIf="isLoading; else courseContent" class="loading-spinner">
+    <p>Loading courses...</p>
+  </div>
+
+  <!-- Main content block executed when isLoading is false -->
+  <ng-template #courseContent>
+    <!-- 28. *ngIf with else block for empty course list -->
+    <div *ngIf="courses.length > 0; else noCoursesTemplate" class="cards-wrapper">
+      <!-- 26. *ngFor with trackBy -->
+      <app-course-card 
+        *ngFor="let c of courses; trackBy: trackByCourseId" 
+        [course]="c" 
+        [isEnrolled]="selectedCourseId === c.id"
+        (enrollRequested)="onEnroll($event)">
+      </app-course-card>
+    </div>
+
+    <!-- 28. Else template for empty array -->
+    <ng-template #noCoursesTemplate>
+      <div class="empty-state">
+        <p>No courses available.</p>
+      </div>
+    </ng-template>
+  </ng-template>
+
+  <p *ngIf="selectedCourseId" class="selected-status">
+    Selected course ID: <strong>{{ selectedCourseId }}</strong>
+  </p>
+</section>
+
+```
+
+---
+
+# Task 2: Attribute Directives (`ngClass` & `ngStyle`)
+
+# Step 29–32: Updating `CourseCardComponent`
+
+# `src/app/components/course-card/course-card.component.ts`
+
+```typescript
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+export interface Course {
+  id: number;
+  name: string;
+  code: string;
+  credits: number | null;
+  gradeStatus: 'passed' | 'failed' | 'pending';
+}
+
+@Component({
+  selector: 'app-course-card',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './course-card.component.html',
+  styleUrls: ['./course-card.component.css']
+})
+export class CourseCardComponent {
+  @Input() course!: Course;
+  @Input() isEnrolled: boolean = false;
+  @Output() enrollRequested = new EventEmitter<number>();
+
+  // 31. Expansion state property
+  isExpanded: boolean = false;
+
+  // 31. Toggle method
+  toggleDetails(): void {
+    this.isExpanded = !this.isExpanded;
+  }
+
+ 
+  get cardClasses(): { [key: string]: boolean } {
+    return {
+      'card--enrolled': this.isEnrolled,
+      'card--full': (this.course.credits ?? 0) >= 4,
+      'expanded': this.isExpanded
+    };
+  }
+
+  // 30. Getter for ngStyle dynamic left border color
+  get cardStyles(): { [key: string]: string } {
+    let borderColor = 'grey'; // Default for 'pending'
+
+    if (this.course.gradeStatus === 'passed') {
+      borderColor = 'green';
+    } else if (this.course.gradeStatus === 'failed') {
+      borderColor = 'red';
+    }
+
+    return {
+      'border-left': `5px solid ${borderColor}`
+    };
+  }
+
+  onEnroll(): void {
+    this.enrollRequested.emit(this.course.id);
+  }
+}
+
+```
+
+# `src/app/components/course-card/course-card.component.html`
+
+```html
+<!-- 29, 31, 32. [ngClass] via getter & 30. [ngStyle] via getter -->
+<div class="course-card" [ngClass]="cardClasses" [ngStyle]="cardStyles">
+  
+  <div class="card-header">
+    <h3>{{ course.name }}</h3>
+
+    <!-- 27. *ngSwitch for grade status badge -->
+    <div [ngSwitch]="course.gradeStatus" class="badge-wrapper">
+      <span *ngSwitchCase="'passed'" class="badge badge-passed">Passed</span>
+      <span *ngSwitchCase="'failed'" class="badge badge-failed">Failed</span>
+      <span *ngSwitchCase="'pending'" class="badge badge-pending">Pending</span>
+      <span *ngSwitchDefault class="badge badge-pending">Unknown</span>
+    </div>
+  </div>
+
+  <p><strong>Code:</strong> {{ course.code }}</p>
+  <p><strong>Credits:</strong> {{ course.credits }}</p>
+
+  <div *ngIf="isExpanded" class="extra-details">
+    <p><em>Detailed syllabus and prerequisite requirements loaded here...</em></p>
+  </div>
+
+  <div class="card-actions">
+    <button (click)="onEnroll()">Enroll</button>
+    <!-- 31. Details toggle button -->
+    <button (click)="toggleDetails()">
+      {{ isExpanded ? 'Hide Details' : 'Show Details' }}
+    </button>
+  </div>
+</div>
+
+```
+
+# `src/app/components/course-card/course-card.component.css`
+
+```css
+.course-card {
+  border: 1px solid #ccc;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+/* 29. Dynamic classes */
+.card--enrolled {
+  background-color: #e8f5e9;
+}
+
+.card--full {
+  font-weight: 500;
+}
+
+/* 31. Expanded class */
+.expanded {
+  min-height: 180px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* 27. Grade badges */
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.8rem;
+}
+
+.badge-passed { background-color: green; }
+.badge-failed { background-color: red; }
+.badge-pending { background-color: grey; }
+
+```
+
+---
+
+## Task 3: Custom Directive and Custom Pipe
+
+# Step 33 & 37: Creating the Configurable `HighlightDirective`
+
+Generate the directive:
+
+```bash
+ng generate directive directives/highlight
+
+```
+
+#### `src/app/directives/highlight.directive.ts`
+
+```typescript
+import { Directive, ElementRef, HostListener, Input, Renderer2 } from '@angular/core';
+
+@Directive({
+  selector: '[appHighlight]',
+  standalone: true
+})
+export class HighlightDirective {
+  // 37. Configurable input color with default value 'yellow'
+  @Input() appHighlight: string = 'yellow';
+
+  constructor(private el: ElementRef, private renderer: Renderer2) {}
+
+  // 33. Listen to mouseenter event on host element
+  @HostListener('mouseenter') onMouseEnter(): void {
+    this.setBgColor(this.appHighlight || 'yellow');
+  }
+
+  // 33. Listen to mouseleave event on host element
+  @HostListener('mouseleave') onMouseLeave(): void {
+    this.setBgColor('');
+  }
+
+  private setBgColor(color: string): void {
+    this.renderer.setStyle(this.el.nativeElement, 'backgroundColor', color);
+  }
+}
+
+```
+
+---
+
+### Step 35: Creating the `CreditLabelPipe`
+
+Generate the pipe:
+
+```bash
+ng generate pipe pipes/credit-label
+
+```
+
+# `src/app/pipes/credit-label.pipe.ts`
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'creditLabel',
+  standalone: true
+})
+export class CreditLabelPipe implements PipeTransform {
+  // 35. Transform credits number into formatted string with edge-case handling
+  transform(value: number | null | undefined): string {
+    if (value === null || value === undefined || value === 0) {
+      return 'No Credits';
+    }
+    if (value === 1) {
+      return '1 Credit';
+    }
+    return `${value} Credits`;
+  }
+}
+
+```
+
+---
+
+### Step 34 & 36: Registering & Applying Custom Directive and Pipe
+
+#### `src/app/components/course-card/course-card.component.ts` (Updated Imports)
+
+Import `HighlightDirective` and `CreditLabelPipe` directly into `CourseCardComponent`:
+
+```typescript
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HighlightDirective } from '../../directives/highlight.directive';
+import { CreditLabelPipe } from '../../pipes/credit-label.pipe';
+
+export interface Course {
+  id: number;
+  name: string;
+  code: string;
+  credits: number | null;
+  gradeStatus: 'passed' | 'failed' | 'pending';
+}
+
+@Component({
+  selector: 'app-course-card',
+  standalone: true,
+  // Declare custom directive and pipe in imports
+  imports: [CommonModule, HighlightDirective, CreditLabelPipe],
+  templateUrl: './course-card.component.html',
+  styleUrls: ['./course-card.component.css']
+})
+export class CourseCardComponent {
+  @Input() course!: Course;
+  @Input() isEnrolled: boolean = false;
+  @Output() enrollRequested = new EventEmitter<number>();
+
+  isExpanded: boolean = false;
+
+  toggleDetails(): void {
+    this.isExpanded = !this.isExpanded;
+  }
+
+  get cardClasses(): { [key: string]: boolean } {
+    return {
+      'card--enrolled': this.isEnrolled,
+      'card--full': (this.course.credits ?? 0) >= 4,
+      'expanded': this.isExpanded
+    };
+  }
+
+  get cardStyles(): { [key: string]: string } {
+    let borderColor = 'grey';
+    if (this.course.gradeStatus === 'passed') borderColor = 'green';
+    if (this.course.gradeStatus === 'failed') borderColor = 'red';
+
+    return { 'border-left': `5px solid ${borderColor}` };
+  }
+
+  onEnroll(): void {
+    this.enrollRequested.emit(this.course.id);
+  }
+}
+
+```
+
+#### `src/app/components/course-card/course-card.component.html` (Updated Template)
+
+```html
+<!-- 34 & 37. Apply configurable appHighlight directive -->
+<div 
+  class="course-card" 
+  [ngClass]="cardClasses" 
+  [ngStyle]="cardStyles"
+  [appHighlight]="'#fffde7'">
+  
+  <div class="card-header">
+    <h3>{{ course.name }}</h3>
+
+    <!-- 27. *ngSwitch -->
+    <div [ngSwitch]="course.gradeStatus" class="badge-wrapper">
+      <span *ngSwitchCase="'passed'" class="badge badge-passed">Passed</span>
+      <span *ngSwitchCase="'failed'" class="badge badge-failed">Failed</span>
+      <span *ngSwitchCase="'pending'" class="badge badge-pending">Pending</span>
+      <span *ngSwitchDefault class="badge badge-pending">Unknown</span>
+    </div>
+  </div>
+
+  <p><strong>Code:</strong> {{ course.code }}</p>
+  
+  <!-- 36. Use custom creditLabel pipe -->
+  <p><strong>Credits:</strong> {{ course.credits | creditLabel }}</p>
+
+  <div *ngIf="isExpanded" class="extra-details">
+    <p><em>Detailed syllabus and prerequisite requirements loaded here...</em></p>
+  </div>
+
+  <div class="card-actions">
+    <button (click)="onEnroll()">Enroll</button>
+    <button (click)="toggleDetails()">
+      {{ isExpanded ? 'Hide Details' : 'Show Details' }}
+    </button>
+  </div>
+</div>
+
+```
+
+---
+
