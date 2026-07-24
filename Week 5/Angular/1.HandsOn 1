@@ -1,1 +1,147 @@
+# Task 1: Project Setup & File Explanations
 
+# Step 1–3: CLI Commands & Verification
+
+Execute the following commands in your terminal:
+
+```bash
+npm install -g @angular/cli
+ng new student-course-portal --routing --style=css
+cd student-course-portal
+ng serve
+
+```
+
+---
+
+# Step 2 & 4–5: `notes.txt` Content
+
+Create a file named `notes.txt` in the root of your project directory and add the following explanations:
+
+```text
+1. angular.json: Root workspace configuration file that defines build settings, CLI defaults, assets, and environment configurations.
+2. tsconfig.json: Root TypeScript configuration file containing global compiler options for the entire project workspace.
+3. tsconfig.app.json: App-specific TypeScript configuration that inherits from tsconfig.json and specifies compiler settings for application code.
+4. package.json: Manages project dependencies, npm scripts (e.g., start, build), and package version locks.
+5. src/main.ts: Main application entry point that bootstraps either the root AppModule or the root Standalone component/AppConfig.
+6. src/app/app.module.ts (or app.config.ts): Configures application-wide providers, routes, and imports (or defines global providers in standalone mode).
+7. src/app/app.component.ts: Root component class defining the logic, template, and styles for the base shell of the application.
+8. src/index.html: Main HTML page host containing the <app-root> tag where Angular dynamically renders the application.
+
+--- Additional Observations ---
+Build Output (dist/):
+- The `dist/student-course-portal/browser` folder contains the compiled, bundled JavaScript assets. 
+- The file containing the compiled application logic is typically `main-[hash].js`.
+
+Budgets Configuration (angular.json -> architect > build > configurations > production):
+- maximumWarning (e.g., 500kB): Triggers a build warning in the console when bundled bundle sizes exceed this limit.
+- maximumError (e.g., 1MB): Fails the build completely if bundle sizes exceed this threshold, preventing oversized bundles in production.
+
+```
+
+---
+
+## Task 2: Create and Organize Components
+
+# Step 6: Generate Components
+
+Run the following CLI commands to create your components:
+
+```bash
+ng generate component components/header
+ng generate component pages/home
+ng generate component pages/course-list
+ng generate component pages/student-profile
+
+```
+
+---
+
+# Step 7: Header Component Template
+
+Open `src/app/components/header/header.component.html` and replace its content with:
+
+```html
+<header class="header">
+  <h2>Student Course Portal</h2>
+  <nav>
+    <a href="#">Home</a> |
+    <a href="#">Courses</a> |
+    <a href="#">Profile</a>
+  </nav>
+</header>
+
+```
+
+---
+
+# Step 8: Home Component Template
+
+Open `src/app/pages/home/home.component.html` and replace its content with:
+
+```html
+<section class="home-container">
+  <h1>Welcome to the Student Course Portal</h1>
+  <p>Manage your academic journey, view enrolled courses, and track your progress all in one place.</p>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <strong>Courses Available:</strong> 12
+    </div>
+    <div class="stat-card">
+      <strong>Enrolled:</strong> 3
+    </div>
+    <div class="stat-card">
+      <strong>GPA:</strong> 3.8
+    </div>
+  </div>
+</section>
+
+```
+
+---
+
+# Step 9 & 10: App Component (Root Layout)
+
+> **Note on Modern Angular (v17+ / v20):**
+> If your project uses standalone components (default in modern Angular), you must import `HeaderComponent` and `HomeComponent` into the `imports` array of `app.component.ts` so the custom tags can be recognized.
+
+# `src/app/app.component.ts`
+
+```typescript
+import { Component } from '@angular/core';
+import { HeaderComponent } from './components/header/header.component';
+import { HomeComponent } from './pages/home/home.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [HeaderComponent, HomeComponent],
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  title = 'student-course-portal';
+}
+
+```
+
+*(If your project is using traditional `NgModule` architecture, ensure `HeaderComponent` and `HomeComponent` are listed in `app.module.ts` under `declarations`.)*
+
+# `src/app/app.component.html`
+
+Replace all boilerplate content in `src/app/app.component.html` with:
+
+```html
+<app-header></app-header>
+<main>
+  <app-home></app-home>
+</main>
+
+```
+
+---
+
+### Verification
+
+Run `ng serve` and open `http://localhost:4200` in your browser. You should see the top header bar with navigation links, followed by the home page title, description, and stats row.
