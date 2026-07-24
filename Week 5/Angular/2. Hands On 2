@@ -1,0 +1,315 @@
+Here is the complete step-by-step solution for **Hands-On 2**, covering all binding types, lifecycle hooks, and parent-child component communication using `@Input` and `@Output`.
+
+---
+
+# Task 1: All Four Binding Types
+
+# Step 11–15: Updating `HomeComponent`
+
+In modern Angular (v17+/v20), components use the standalone API by default. We will import `FormsModule` directly into `HomeComponent`.
+
+# `src/app/pages/home/home.component.ts`
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // Required for [(ngModel)]
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './home.component.html',
+  styleUrls: ['./home.component.css']
+})
+export class HomeComponent {
+  // 11. String interpolation property
+  portalName: string = 'Student Course Portal';
+
+  // 12. Property binding flag
+  isPortalActive: boolean = true;
+
+  // 13. Message property updated via event binding
+  message: string = '';
+
+  // 14. Property bound to input via [(ngModel)]
+  searchTerm: string = '';
+
+  // 13. Event binding handler
+  onEnrollClick(): void {
+    this.message = 'Enrollment opened!';
+  }
+
+ }
+
+```
+
+# `src/app/pages/home/home.component.html`
+
+```html
+<section class="home-container">
+  <!-- 11. String Interpolation -->
+  <h1>Welcome to {{ portalName }}</h1>
+
+  <p>Manage your academic journey, view enrolled courses, and track your progress all in one place.</p>
+
+  <!-- 12 & 13. Property Binding [disabled] and Event Binding (click) -->
+  <button [disabled]="!isPortalActive" (click)="onEnrollClick()">
+    Enroll Now
+  </button>
+
+  <!-- Display message resulting from event binding -->
+  <p *ngIf="message" class="alert-message">{{ message }}</p>
+
+  <hr />
+
+  <!-- 14. Two-Way Binding with [(ngModel)] -->
+  <div class="search-box">
+    <label for="search">Search Courses: </label>
+    <input 
+      id="search"
+      type="text" 
+      [(ngModel)]="searchTerm" 
+      placeholder="Type a course name..." 
+    />
+    <p>Searching for: <strong>{{ searchTerm }}</strong></p>
+  </div>
+</section>
+
+```
+
+---
+
+# Task 2: Lifecycle Hooks & Component Setup
+
+# Step 16–17: `HomeComponent` Lifecycle Hooks (`ngOnInit` & `ngOnDestroy`)
+
+Update `home.component.ts` to implement `OnInit` and `OnDestroy`
+# `src/app/pages/home/home.component.ts` (Updated)
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-home',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './home.component.html',
+  styleUrls: ['./home.component.css']
+})
+export class HomeComponent implements OnInit, OnDestroy {
+  portalName: string = 'Student Course Portal';
+  isPortalActive: boolean = true;
+  message: string = '';
+  searchTerm: string = '';
+
+  // 16. ngOnInit Hook
+  ngOnInit(): void {
+    // Simulate fetching available course count
+    console.log('HomeComponent initialised — courses loaded');
+  }
+
+  // 17. ngOnDestroy Hook
+  ngOnDestroy(): void {
+    console.log('HomeComponent destroyed');
+  }
+
+  onEnrollClick(): void {
+    this.message = 'Enrollment opened!';
+  }
+}
+
+```
+
+---
+
+# Step 18, 20 & 21: Creating `CourseCardComponent`
+
+Generate the component using CLI:
+
+```bash
+ng generate component components/course-card
+
+```
+
+Now implement `@Input`, `@Output`, and `ngOnChanges`:
+
+# `src/app/components/course-card/course-card.component.ts`
+
+```typescript
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+// Define Interface for strict typing
+export interface Course {
+  id: number;
+  name: string;
+  code: string;
+  credits: number;
+}
+
+@Component({
+  selector: 'app-course-card',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './course-card.component.html',
+  styleUrls: ['./course-card.component.css']
+})
+export class CourseCardComponent implements OnChanges {
+  // 18 & 20. @Input property with custom course type
+  @Input() course!: Course;
+
+  // 21. Strongly-typed @Output event emitter passing the course ID
+  @Output() enrollRequested = new EventEmitter<number>();
+
+  // 18. ngOnChanges Hook
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['course']) {
+      console.log('CourseCardComponent input changed:', {
+        previousValue: changes['course'].previousValue,
+        currentValue: changes['course'].currentValue,
+        firstChange: changes['course'].firstChange
+      });
+    }
+  }
+
+  // 21. Trigger method when button is clicked
+  onEnroll(): void {
+    this.enrollRequested.emit(this.course.id);
+  }
+}
+
+```
+
+# `src/app/components/course-card/course-card.component.html`
+
+```html
+<div class="course-card">
+  <!-- 20. Render course data fields -->
+  <h3>{{ course.name }}</h3>
+  <p><strong>Code:</strong> {{ course.code }}</p>
+  <p><strong>Credits:</strong> {{ course.credits }}</p>
+
+  <!-- 21. Event trigger button -->
+  <button (click)="onEnroll()">Enroll</button>
+</div>
+
+```
+
+---
+
+# Task 3: `@Input` and `@Output` Parent-Child Communication
+
+# Step 19, 22–24: Implementing `CourseListComponent`
+
+# `src/app/pages/course-list/course-list.component.ts`
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CourseCardComponent, Course } from '../../components/course-card/course-card.component';
+
+@Component({
+  selector: 'app-course-list',
+  standalone: true,
+  imports: [CommonModule, CourseCardComponent],
+  templateUrl: './course-list.component.html',
+  styleUrls: ['./course-list.component.css']
+})
+export class CourseListComponent {
+  // 22. Array of 5 course objects
+  courses: Course[] = [
+    { id: 101, name: 'Angular Fundamentals', code: 'CS101', credits: 4 },
+    { id: 102, name: 'TypeScript Deep Dive', code: 'CS102', credits: 3 },
+    { id: 103, name: 'Web Development BootCamp', code: 'CS103', credits: 4 },
+    { id: 104, name: 'Data Structures in JS', code: 'CS104', credits: 3 },
+    { id: 105, name: 'RxJS & Reactive Patterns', code: 'CS105', credits: 2 }
+  ];
+
+  // Property to store the selected ID
+  selectedCourseId: number | null = null;
+
+  // 23. Receiver method handling child @Output event
+  onEnroll(courseId: number): void {
+    console.log('Enrolling in course: ' + courseId);
+    this.selectedCourseId = courseId;
+  }
+}
+
+```
+
+# `src/app/pages/course-list/course-list.component.html`
+
+```html
+<section class="course-list-container">
+  <h2>Available Courses</h2>
+
+  <div class="cards-wrapper">
+    <!-- 22. Iterate over courses, bind input [course] and output (enrollRequested) -->
+    <app-course-card 
+      *ngFor="let c of courses" 
+      [course]="c" 
+      (enrollRequested)="onEnroll($event)">
+    </app-course-card>
+  </div>
+
+  <hr />
+
+  <!-- 24. Display selected course ID -->
+  <p class="selected-status">
+    Selected course ID: <strong>{{ selectedCourseId !== null ? selectedCourseId : 'None' }}</strong>
+  </p>
+</section>
+
+```
+
+---
+
+# Step 9 Replacement: View in Root Shell
+
+To observe both the `HomeComponent` lifecycle hooks and the `CourseListComponent`, update `app.component.ts` and `app.component.html` to toggle or view both pages.
+
+#### `src/app/app.component.ts`
+
+```typescript
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { HeaderComponent } from './components/header/header.component';
+import { HomeComponent } from './pages/home/home.component';
+import { CourseListComponent } from './pages/course-list/course-list.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [CommonModule, HeaderComponent, HomeComponent, CourseListComponent],
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+export class AppComponent {
+  activeTab: 'home' | 'courses' = 'home';
+}
+
+```
+
+# `src/app/app.component.html`
+
+```html
+<app-header></app-header>
+
+<main style="padding: 20px;">
+  <div style="margin-bottom: 20px;">
+    <button (click)="activeTab = 'home'">Go to Home</button>
+    <button (click)="activeTab = 'courses'">Go to Courses</button>
+  </div>
+
+  <!-- Switching between tabs triggers ngOnInit / ngOnDestroy in HomeComponent -->
+  <app-home *ngIf="activeTab === 'home'"></app-home>
+  <app-course-list *ngIf="activeTab === 'courses'"></app-course-list>
+</main>
+
+```
+
+---
+
