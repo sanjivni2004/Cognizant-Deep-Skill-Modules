@@ -1,0 +1,393 @@
+ Task 1: Build a Reactive Form with FormBuilder
+
+ Step 48: Generate Component and Setup Route
+
+Generate the reactive enrollment form component via CLI:
+
+```bash
+ng generate component pages/reactive-enrollment-form
+
+```
+
+Add the route at `/enroll-reactive` in your router configuration:
+
+ `src/app/app.routes.ts`
+
+```typescript
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  { 
+    path: 'enroll-reactive', 
+    loadComponent: () => import('./pages/reactive-enrollment-form/reactive-enrollment-form.component')
+      .then(m => m.ReactiveEnrollmentFormComponent) 
+  }
+];
+
+```
+
+---
+
+## Task 1 & Task 2: Reactive Form with Custom & Async Validators + FormArray
+
+
+
+ `src/app/pages/reactive-enrollment-form/reactive-enrollment-form.component.ts`
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { 
+  ReactiveFormsModule, 
+  FormBuilder, 
+  FormGroup, 
+  FormArray, 
+  FormControl, 
+  Validators, 
+  AbstractControl, 
+  ValidationErrors 
+} from '@angular/forms';
+
+// 53. Custom Synchronous Validator
+export function noCourseCode(control: AbstractControl): ValidationErrors | null {
+  const value = String(control.value || '');
+  if (value.toUpperCase().startsWith('XX')) {
+    return { noCourseCode: true };
+  }
+  return null;
+}
+
+// 55. Custom Async Validator
+export function simulateEmailCheck(control: AbstractControl): Promise<ValidationErrors | null> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const email = String(control.value || '');
+      if (email.toLowerCase().includes('test@')) {
+        resolve({ emailTaken: true });
+      } else {
+        resolve(null);
+      }
+    }, 800);
+  });
+}
+
+@Component({
+  selector: 'app-reactive-enrollment-form',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule],
+  templateUrl: './reactive-enrollment-form.component.html',
+  styleUrls: ['./reactive-enrollment-form.component.css']
+})
+export class ReactiveEnrollmentFormComponent implements OnInit {
+  enrollForm!: FormGroup;
+  submitted = false;
+
+  // 49. Inject FormBuilder
+  constructor(private fb: FormBuilder) {}
+
+  ngOnInit(): void {
+    // 49, 53, 55, 56. Build Form Structure
+    this.enrollForm = this.fb.group({
+      studentName: ['', [Validators.required, Validators.minLength(3)]],
+      studentEmail: ['', [Validators.required, Validators.email], [simulateEmailCheck]],
+      courseId: ['', [Validators.required, noCourseCode]],
+      preferredSemester: ['Odd', Validators.required],
+      agreeToTerms: [false, Validators.requiredTrue],
+      // 56. Dynamic FormArray for repeating fields
+      additionalCourses: this.fb.array([])
+    });
+  }
+
+  // 57. Typed Getter for FormArray
+  
+  get additionalCourses(): FormArray {
+    return this.enrollForm.get('additionalCourses') as FormArray;
+  }
+
+  // 56. Add a dynamic course control
+  addCourse(): void {
+    this.additionalCourses.push(this.fb.control('', Validators.required));
+  }
+
+  // 56. Remove a dynamic course control
+  removeCourse(index: number): void {
+    this.additionalCourses.removeAt(index);
+  }
+
+  // 51. Submission handler
+  onSubmit(): void {
+    if (this.enrollForm.valid) {
+      this.submitted = true;
+
+     
+      console.log('enrollForm.value (excludes disabled controls):', this.enrollForm.value);
+      console.log('enrollForm.getRawValue() (includes all controls):', this.enrollForm.getRawValue());
+    } else {
+      this.enrollForm.markAllAsTouched();
+    }
+  }
+
+  // Getters for form control access in template
+  get f() {
+    return this.enrollForm.controls;
+  }
+}
+
+```
+
+---
+
+#### `src/app/pages/reactive-enrollment-form/reactive-enrollment-form.component.html`
+
+```html
+<section class="form-container">
+  <h2>Reactive Student Enrollment Form</h2>
+
+  <div *ngIf="submitted" class="alert alert-success">
+    Reactive Enrollment Request Submitted Successfully!
+  </div>
+
+  <!-- 50. Bind formGroup -->
+  <form [formGroup]="enrollForm" (ngSubmit)="onSubmit()" novalidate>
+
+    <!-- Student Name -->
+    <div class="form-group">
+      <label for="studentName">Student Name *</label>
+      <input 
+        type="text" 
+        id="studentName" 
+        formControlName="studentName" 
+        class="form-control"
+      />
+      <div *ngIf="f['studentName'].invalid && f['studentName'].touched" class="error-feedback">
+        <small *ngIf="f['studentName'].errors?.['required']">Name is required.</small>
+        <small *ngIf="f['studentName'].errors?.['minlength']">Name must be at least 3 characters.</small>
+      </div>
+    </div>
+
+    <!-- Student Email (with Async Validator) -->
+    <div class="form-group">
+      <label for="studentEmail">Email Address *</label>
+      <input 
+        type="email" 
+        id="studentEmail" 
+        formControlName="studentEmail" 
+        class="form-control"
+      />
+      <!-- Async pending state -->
+      <small *ngIf="f['studentEmail'].pending" class="info-feedback">Checking email availability...</small>
+      
+      <div *ngIf="f['studentEmail'].invalid && f['studentEmail'].touched" class="error-feedback">
+        <small *ngIf="f['studentEmail'].errors?.['required']">Email address is required.</small>
+        <small *ngIf="f['studentEmail'].errors?.['email']">Please enter a valid email address.</small>
+        <!-- 55. Async validator custom error -->
+        <small *ngIf="f['studentEmail'].errors?.['emailTaken']">Email address is already taken (test&#64; accounts disallowed).</small>
+      </div>
+    </div>
+
+    <!-- Course ID (with Custom Sync Validator) -->
+    <div class="form-group">
+      <label for="courseId">Course Code/ID *</label>
+      <input 
+        type="text" 
+        id="courseId" 
+        formControlName="courseId" 
+        placeholder="e.g. CS101" 
+        class="form-control"
+      />
+      <div *ngIf="f['courseId'].invalid && f['courseId'].touched" class="error-feedback">
+        <small *ngIf="f['courseId'].errors?.['required']">Course ID is required.</small>
+        <!-- 54. Custom synchronous error message -->
+        <small *ngIf="f['courseId'].errors?.['noCourseCode']">Course code starting with XX is not allowed.</small>
+      </div>
+    </div>
+
+    <!-- Preferred Semester -->
+    <div class="form-group">
+      <label for="preferredSemester">Preferred Semester</label>
+      <select id="preferredSemester" formControlName="preferredSemester" class="form-control">
+        <option value="Odd">Odd Semester</option>
+        <option value="Even">Even Semester</option>
+      </select>
+    </div>
+
+    <!-- 56. Dynamic FormArray Section -->
+    <div class="form-group dynamic-section">
+      <label>Additional Courses to Enroll</label>
+      
+      <div formArrayName="additionalCourses">
+        <div 
+          *ngFor="let courseControl of additionalCourses.controls; let i = index" 
+          class="dynamic-row"
+        >
+          <input 
+            type="text" 
+            [formControlName]="i" 
+            placeholder="Course Code {{ i + 1 }}" 
+            class="form-control"
+          />
+          <button type="button" (click)="removeCourse(i)" class="btn btn-danger">
+            Remove
+          </button>
+        </div>
+      </div>
+
+      <button type="button" (click)="addCourse()" class="btn btn-outline">
+        + Add Another Course
+      </button>
+    </div>
+
+    <!-- Terms & Conditions Checkbox -->
+    <div class="form-group checkbox-group">
+      <label>
+        <input type="checkbox" formControlName="agreeToTerms" />
+        I agree to the enrollment terms and conditions *
+      </label>
+      <div *ngIf="f['agreeToTerms'].invalid && f['agreeToTerms'].touched" class="error-feedback">
+        <small>You must accept the terms to proceed.</small>
+      </div>
+    </div>
+
+    <!-- Submit Button (51. Disabled when form is invalid) -->
+    <div class="button-group">
+      <button type="submit" [disabled]="enrollForm.invalid" class="btn btn-primary">
+        Submit
+      </button>
+    </div>
+
+  </form>
+</section>
+
+```
+
+---
+
+ `src/app/pages/reactive-enrollment-form/reactive-enrollment-form.component.css`
+
+```css
+.form-container {
+  max-width: 550px;
+  margin: 20px auto;
+  padding: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.form-group {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.form-control {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.form-control.ng-invalid.ng-touched {
+  border-color: #d32f2f;
+  background-color: #fff8f8;
+}
+
+.form-control.ng-valid.ng-touched {
+  border-color: #2e7d32;
+}
+
+.error-feedback {
+  color: #d32f2f;
+  margin-top: 4px;
+}
+
+.info-feedback {
+  color: #0288d1;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.checkbox-group {
+  flex-direction: row;
+  align-items: center;
+}
+
+.checkbox-group label {
+  font-weight: normal;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.dynamic-section {
+  border-top: 1px dashed #ccc;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.dynamic-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.dynamic-row .form-control {
+  flex: 1;
+}
+
+.btn {
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #1976d2;
+  color: white;
+  width: 100%;
+}
+
+.btn-primary:disabled {
+  background-color: #b0bec5;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background-color: #d32f2f;
+  color: white;
+}
+
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid #1976d2;
+  color: #1976d2;
+  margin-top: 6px;
+  align-self: flex-start;
+}
+
+.alert-success {
+  padding: 12px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+```
+
+
+
