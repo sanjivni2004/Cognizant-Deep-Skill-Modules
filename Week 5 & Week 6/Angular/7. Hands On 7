@@ -1,0 +1,353 @@
+Task 1: Route Configuration, Parameters, and Nested Routes
+
+ Generate Components & Setup ActivatedRoute
+
+Generate the required components via CLI:
+
+```bash
+ng generate component pages/course-detail
+ng generate component pages/courses-layout
+ng generate component pages/not-found
+
+```
+
+`src/app/pages/course-detail/course-detail.component.ts`
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { CourseService, Course } from '../../services/course.service';
+
+@Component({
+  selector: 'app-course-detail',
+  standalone: true,
+  imports: [CommonModule, RouterLink],
+  templateUrl: './course-detail.component.html',
+  styleUrls: ['./course-detail.component.css']
+})
+export class CourseDetailComponent implements OnInit {
+  course: Course | undefined;
+  courseId: number | null = null;
+
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private courseService: CourseService
+  ) {}
+
+  ngOnInit(): void {
+    // 69. Read path parameter snapshot
+    const idParam = this.route.snapshot.paramMap.get('id');
+    this.courseId = idParam ? Number(idParam) : null;
+
+    if (this.courseId) {
+      this.courseService.getCourseById(this.courseId).subscribe((data) => {
+        this.course = data;
+      });
+    }
+  }
+
+  goBack(): void {
+    this.router.navigate(['/courses']);
+  }
+}
+
+```
+
+#### `src/app/pages/course-detail/course-detail.component.html`
+
+```html
+<section class="course-detail-container" *ngIf="course; else notFound">
+  <button (click)="goBack()" class="btn btn-secondary">← Back to Courses</button>
+
+  <h2>{{ course.name }}</h2>
+  <div class="detail-card">
+    <p><strong>Course ID:</strong> {{ course.id }}</p>
+    <p><strong>Course Code:</strong> {{ course.code }}</p>
+    <p><strong>Credits:</strong> {{ course.credits }}</p>
+    <p><strong>Status:</strong> {{ course.gradeStatus }}</p>
+    <p><strong>Description:</strong> {{ course.description || 'Comprehensive module covering core concepts.' }}</p>
+  </div>
+</section>
+
+<ng-template #notFound>
+  <div class="alert alert-warning">
+    <p>Course with ID {{ courseId }} was not found.</p>
+    <button (click)="goBack()" class="btn btn-primary">Back to Courses</button>
+  </div>
+</ng-template>
+
+```
+
+---
+
+Step 71: Query Parameters in `CourseListComponent`
+
+Update `CourseListComponent` to reflect the search term in the URL query string (`/courses?search=angular`) and restore state when navigating directly to the URL.
+
+#### `src/app/pages/course-list/course-list.component.ts`
+
+```typescript
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+import { CourseCardComponent } from '../../components/course-card/course-card.component';
+import { CourseService, Course } from '../../services/course.service';
+
+@Component({
+  selector: 'app-course-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule, CourseCardComponent],
+  templateUrl: './course-list.component.html',
+  styleUrls: ['./course-list.component.css']
+})
+export class CourseListComponent implements OnInit {
+  courses: Course[] = [];
+  filteredCourses: Course[] = [];
+  searchTerm: string = '';
+  isLoading: boolean = true;
+
+  constructor(
+    private courseService: CourseService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit(): void {
+    // 71. Read query parameter from snapshot
+    const initialSearch = this.route.snapshot.queryParamMap.get('search');
+    if (initialSearch) {
+      this.searchTerm = initialSearch;
+    }
+
+    this.courseService.getCourses().subscribe((data) => {
+      this.courses = data;
+      this.filterCourses();
+      this.isLoading = false;
+    });
+  }
+
+  // 71. Update URL query parameters on input change
+  onSearchChange(): void {
+    this.router.navigate(['/courses'], {
+      queryParams: { search: this.searchTerm || null },
+      queryParamsHandling: 'merge'
+    });
+    this.filterCourses();
+  }
+
+  filterCourses(): void {
+    if (!this.searchTerm.trim()) {
+      this.filteredCourses = this.courses;
+    } else {
+      this.filteredCourses = this.courses.filter(c => 
+        c.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        c.code.toLowerCase().includes(this.searchTerm.toLowerCase())
+      );
+    }
+  }
+
+  // 70. Navigate dynamically to details route
+  onCardClick(courseId: number): void {
+    this.router.navigate(['/courses', courseId]);
+  }
+}
+
+```
+
+---
+
+### Step 72: Courses Layout Shell Component
+
+#### `src/app/pages/courses-layout/courses-layout.component.ts`
+
+```typescript
+import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+
+@Component({
+  selector: 'app-courses-layout',
+  standalone: true,
+  imports: [RouterOutlet],
+  template: `
+    <div class="courses-wrapper">
+      <!-- 72. Nested router-outlet -->
+      <router-outlet></router-outlet>
+    </div>
+  `
+})
+export class CoursesLayoutComponent {}
+
+```
+
+---
+
+## Task 2: Lazy Loading and Route Guards
+
+### Step 75: Auth Service & `CanActivate` Guard
+
+Generate the service and guard:
+
+```bash
+ng generate service services/auth
+ng generate guard guards/auth
+
+```
+
+#### `src/app/services/auth.service.ts`
+
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  // 75. Hardcoded auth state for testing
+  private loggedIn: boolean = true;
+
+  isLoggedIn(): boolean {
+    return this.loggedIn;
+  }
+
+  login(): void {
+    this.loggedIn = true;
+  }
+
+  logout(): void {
+    this.loggedIn = false;
+  }
+}
+
+```
+
+#### `src/app/guards/auth.guard.ts`
+
+```typescript
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+
+// Modern functional CanActivateFn in Angular v17+/v20
+export const authGuard: CanActivateFn = (route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isLoggedIn()) {
+    return true;
+  }
+
+  // 75. Redirect to Home if unauthorized
+  console.warn('Access denied by AuthGuard — redirecting to Home');
+  router.navigate(['/']);
+  return false;
+};
+
+```
+
+---
+
+### Step 77: `CanDeactivate` Guard for Unsaved Changes
+
+Generate the guard:
+
+```bash
+ng generate guard guards/unsaved-changes
+
+```
+
+Create an interface to enforce that target components expose an `isDirty()` method or boolean:
+
+#### `src/app/guards/unsaved-changes.guard.ts`
+
+```typescript
+import { CanDeactivateFn } from '@angular/router';
+
+export interface ComponentWithUnsavedChanges {
+  hasUnsavedChanges: () => boolean;
+}
+
+// 77. Modern functional CanDeactivateFn
+export const unsavedChangesGuard: CanDeactivateFn<ComponentWithUnsavedChanges> = (component) => {
+  if (component.hasUnsavedChanges && component.hasUnsavedChanges()) {
+    return window.confirm('You have unsaved changes. Are you sure you want to leave?');
+  }
+  return true;
+};
+
+```
+
+Update your `ReactiveEnrollmentFormComponent` to expose `hasUnsavedChanges()`:
+
+#### `src/app/pages/reactive-enrollment-form/reactive-enrollment-form.component.ts` (Snippet)
+
+```typescript
+import { ComponentWithUnsavedChanges } from '../../guards/unsaved-changes.guard';
+
+export class ReactiveEnrollmentFormComponent implements ComponentWithUnsavedChanges {
+  // Method required by UnsavedChangesGuard
+  hasUnsavedChanges(): boolean {
+    return this.enrollForm ? this.enrollForm.dirty && !this.submitted : false;
+  }
+}
+
+```
+
+---
+
+### Step 73 & 76: Complete Application Route Definition
+
+In Angular v17+/v20 standalone setups, routes are declared in `app.routes.ts`. Lazy loading routes for standalone components use `loadComponent` or `loadChildren`.
+
+#### `src/app/app.routes.ts`
+
+```typescript
+import { Routes } from '@angular/router';
+import { HomeComponent } from './pages/home/home.component';
+import { StudentProfileComponent } from './pages/student-profile/student-profile.component';
+import { CoursesLayoutComponent } from './pages/courses-layout/courses-layout.component';
+import { CourseListComponent } from './pages/course-list/course-list.component';
+import { CourseDetailComponent } from './pages/course-detail/course-detail.component';
+import { NotFoundComponent } from './pages/not-found/not-found.component';
+import { authGuard } from './guards/auth.guard';
+import { unsavedChangesGuard } from './guards/unsaved-changes.guard';
+
+export const routes: Routes = [
+  // 68. Base routes
+  { path: '', component: HomeComponent },
+
+  // 72. Nested routes under /courses layout
+  {
+    path: 'courses',
+    component: CoursesLayoutComponent,
+    children: [
+      { path: '', component: CourseListComponent },
+      { path: ':id', component: CourseDetailComponent } // 68 & 69. Dynamic route param
+    ]
+  },
+
+  // 76. Protected route using CanActivate guard
+  { 
+    path: 'profile', 
+    component: StudentProfileComponent, 
+    canActivate: [authGuard] 
+  },
+
+  // 73. Lazy loaded feature route
+  {
+    path: 'enroll',
+    loadComponent: () => 
+      import('./pages/reactive-enrollment-form/reactive-enrollment-form.component')
+        .then(m => m.ReactiveEnrollmentFormComponent),
+    canActivate: [authGuard], // 76. Protected lazy route
+    canDeactivate: [unsavedChangesGuard] // 77. Protected against unsaved changes
+  },
+
+  // 68. 404 Wildcard route — must always be last
+  { path: '**', component: NotFoundComponent }
+];
+
+```
+
